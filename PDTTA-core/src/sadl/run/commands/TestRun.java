@@ -19,7 +19,6 @@ import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
 import sadl.constants.DetectorMethod;
@@ -47,6 +46,8 @@ import sadl.utils.IoUtils;
 public class TestRun {
 
 	private static final Logger logger = LoggerFactory.getLogger(TestRun.class);
+
+	private final boolean smacMode;
 
 	// Detector parameters
 	@Parameter(names = "-aggregateSublists", arity = 1)
@@ -121,10 +122,11 @@ public class TestRun {
 
 	private OneClassClassifier classifier;;
 
-	public TestRun() {
+	public TestRun(boolean smacMode) {
+		this.smacMode = smacMode;
 	}
 
-	public ExperimentResult run(JCommander jc) {
+	public ExperimentResult run() {
 
 		FeatureCreator featureCreator;
 		AnomalyDetector anomalyDetector;
@@ -152,26 +154,27 @@ public class TestRun {
 		}
 		anomalyDetector = new VectorDetector(aggType, featureCreator, classifier);
 
-		try {
-			testModel = (ProbabilisticModel) IoUtils.deserialize(modelFile);
-		} catch (final Exception e) {
-			logger.error("Error when loading model from file!", e);
+		if(!smacMode){
+			try {
+				testModel = (ProbabilisticModel) IoUtils.deserialize(modelFile);
+			} catch (final Exception e) {
+				logger.error("Error when loading model from file!", e);
+			}
+			try {
+				testSeqs = TimedInput.parse(testIn);
+			} catch (final IOException e) {
+				logger.error("Error when parsing the test sequences from file!", e);
+			}
 		}
-		try {
-			testSeqs = TimedInput.parse(testIn);
-		} catch (final IOException e) {
-			logger.error("Error when parsing the test sequences from file!", e);
-		}
-		if (testSeqs.size() <= 0) {
-			logger.warn("Empty test set provided. Nothind to do.");
-			return null;
-		}
+
 		if (anomalyDetector instanceof TrainableDetector) {
 			anomalyDetector.setModel(testModel);
-			try {
-				trainSeqs = TimedInput.parse(trainIn);
-			} catch (final IOException e) {
-				logger.error("Error when parsing the train sequences from file!", e);
+			if (!smacMode) {
+				try {
+					trainSeqs = TimedInput.parse(trainIn);
+				} catch (final IOException e) {
+					logger.error("Error when parsing the train sequences from file!", e);
+				}
 			}
 			((TrainableDetector) anomalyDetector).train(trainSeqs);
 		}
@@ -179,12 +182,14 @@ public class TestRun {
 		final Evaluation eval = new Evaluation(anomalyDetector, testModel);
 		final ExperimentResult result = eval.evaluate(testSeqs);
 
-		try (BufferedWriter bw = Files.newBufferedWriter(resultOut)) {
-			bw.write(result.toCsvString());
-			bw.close();
-			System.out.println("F-Measure=" + result.getFMeasure());
-		} catch (final IOException e) {
-			logger.error("Error when storing the test result to file!", e);
+		if (!smacMode) {
+			try (BufferedWriter bw= Files.newBufferedWriter(resultOut)){
+				bw.write(result.toCsvString());
+				bw.close();
+				System.out.println("F-Measure=" + result.getFMeasure());
+			}			catch (final IOException e) {
+				logger.error("Error when storing the test result to file!", e);
+			}
 		}
 		return result;
 	}

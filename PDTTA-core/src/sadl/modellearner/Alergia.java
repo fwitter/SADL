@@ -118,7 +118,7 @@ public class Alergia implements PdfaLearner {
 		try {
 			final String fileName = "pta_" + (stepValue) + "-" + stepCounter;
 			final Path graphVizFile = Paths.get(fileName + ".gv");
-			pta.toPdfa().toGraphvizFile(graphVizFile);
+			pta.toPdfa().toGraphvizFile(graphVizFile, false);
 			final Path pngFile = Paths.get(fileName + ".png");
 			IoUtils.runGraphviz(graphVizFile, pngFile);
 		} catch (final IOException e) {
