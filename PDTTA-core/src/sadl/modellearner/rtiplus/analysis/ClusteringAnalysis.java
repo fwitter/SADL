@@ -1,6 +1,6 @@
 /**
  * This file is part of SADL, a library for learning all sorts of (timed) automata and performing sequence-based anomaly detection.
- * Copyright (C) 2013-2016  the original author or authors.
+ * Copyright (C) 2013-2017  the original author or authors.
  *
  * SADL is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
  *
@@ -115,14 +115,6 @@ public abstract class ClusteringAnalysis extends DistributionAnalysis {
 		splits.add(prevMax + prevTol);
 
 		return splits;
-	}
-
-	private static double normalize(int v, int min, int max) {
-		return (v - min) / (double) (max - min);
-	}
-
-	private static int denormalize(double v, int min, int max) {
-		return (int) Math.rint(v * (max - min) + min);
 	}
 
 	abstract List<TDoubleList> computeClusters(List<double[]> data);
