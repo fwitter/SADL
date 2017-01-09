@@ -229,7 +229,7 @@ public class SimplePDRTALearner implements ProbabilisticModelLearner {
 		logger.info("RTI+: Building automaton from input sequences");
 
 		final boolean expand = intervalDistriAnalysis != null;
-		final PDRTAInput in = new PDRTAInput(trainingSequences, histoBinDistriAnalysis, expand ? intervalExpRate : 0.0);
+		final PDRTAInput in = new PDRTAInput(trainingSequences, histoBinDistriAnalysis, doNotMergeWithRoot, expand ? intervalExpRate : 0.0);
 		final PDRTA a = new PDRTA(in);
 
 		// TODO log new params

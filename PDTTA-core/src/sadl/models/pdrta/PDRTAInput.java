@@ -19,9 +19,12 @@ import java.util.TreeMap;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
 import sadl.input.TimedInput;
 import sadl.input.TimedWord;
 import sadl.modellearner.rtiplus.OperationUtil;
@@ -46,10 +49,10 @@ public class PDRTAInput implements Serializable {
 
 	private final TimedInput inp;
 
-	public PDRTAInput(TimedInput inp, DistributionAnalysis histoBinDistributionAnalyis, double expansionRate) {
+	public PDRTAInput(TimedInput inp, DistributionAnalysis histoBinDistributionAnalyis, boolean ignoreFirstDelay, double expansionRate) {
 
 		this.inp = inp;
-		final Pair<TIntList, TIntList> timePoints = loadTimeDelays();
+		final Pair<TIntList, TIntList> timePoints = loadTimeDelays(ignoreFirstDelay);
 		minTimeDelay = timePoints.getLeft().get(0);
 		maxTimeDelay = timePoints.getLeft().get(timePoints.getLeft().size() - 1);
 		expand(expansionRate);
@@ -90,22 +93,35 @@ public class PDRTAInput implements Serializable {
 		}
 	}
 
-	@SuppressWarnings("boxing")
-	private Pair<TIntList, TIntList> loadTimeDelays() {
+	private Pair<TIntList, TIntList> loadTimeDelays(boolean ignoreFirstDelay) {
 
 		final TIntIntMap timeDistr = new TIntIntHashMap();
+		final TIntSet ignoredDelays = new TIntHashSet();
 
-		int timeDelay;
 		for (final TimedWord w : inp) {
-			for (int i = 0; i < w.length(); i++) {
-				timeDelay = w.getTimeValue(i);
-				timeDistr.adjustOrPutValue(timeDelay, 1, 1);
+			if (w.length() > 0) {
+				if (ignoreFirstDelay) {
+					ignoredDelays.add(w.getTimeValue(0));
+				} else {
+					timeDistr.adjustOrPutValue(w.getTimeValue(0), 1, 1);
+				}
+				for (int i = 1; i < w.length(); i++) {
+					timeDistr.adjustOrPutValue(w.getTimeValue(i), 1, 1);
+				}
+			}
+		}
+
+		final TIntIterator it = ignoredDelays.iterator();
+		while (it.hasNext()) {
+			final int ignDel = it.next();
+			if (!timeDistr.containsKey(ignDel)) {
+				timeDistr.put(ignDel, 1);
 			}
 		}
 
 		final SortedMap<Integer, Integer> sortedTimeDistr = new TreeMap<>();
 		timeDistr.forEachEntry((k, v) -> {
-			return sortedTimeDistr.put(k, v) == null;
+			return sortedTimeDistr.put(new Integer(k), new Integer(v)) == null;
 		});
 
 		return OperationUtil.distributionsMapToLists(sortedTimeDistr);
